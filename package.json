@@ -1,0 +1,14 @@
+{
+  "name": "project-api",
+  "version": "1.0.0",
+  "description": "An API that periodically fetches data from the eurostat API and elaborates it for the related React frontend app. It also periodically saves a snapshot of the data on a DB.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Daniele Dalla Rosa",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}

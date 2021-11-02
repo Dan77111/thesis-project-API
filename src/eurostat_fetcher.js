@@ -2,6 +2,46 @@ const fetch = require('node-fetch');
 
 const eurostat_api_root = process.env.EUROSTAT_API;
 
+/**
+ * Get the year present in year_array closest to the target_year,
+ * in case of ties the most recent is returned
+ * @param {number[]} year_array
+ * @param {number} target_year
+ * @returns {number} a year present in year_array
+ */
+const get_closest_year = (year_array, target_year) => {
+  let min_year = year_array[0];
+  year_array.forEach((year) => {
+    if (
+      Math.abs(year - target_year) <=
+      Math.abs(year_array[min_year] - target_year)
+    ) {
+      min_year = year;
+    }
+  });
+  return min_year;
+};
+
+/**
+ * This contains all of the indicators that have to be requested from the eurostat API formatted as:
+ * CATEGORY: {
+ *  endpoint:string           If all the indicators of a certain categories have a common endpoint or at least the root of an endpoint it is here
+ *  indicators: {             All the indicators of a certain category
+ *    INDICATOR: {
+ *      desc:string           A description of the indicator as written in the R script I got the indicators from
+ *      endpoint:string       OPTIONAL: If the indicators don't have a common endpoint or if only the root is common this will contain
+ *                            the entire endpoint or the suffix
+ *      parameter:string      All of the parameters needed to get the right indicator are here (e.g. sex, age, unit, ...)
+ *      composite:string      OPTIONAL: If this exists the indicator is a composite one and contains another parameter called additional_data
+ *      additional_data: {    OPTIONAL: All the data needed for composite indicators (other endpoint with relative parameters, ...)
+ *        endpoint:           The endpoint for the additional indicator
+ *        parameter:string    All of the parameters needed to get the right indicator are here (e.g. sex, age, unit, ...)
+ *        operation:function  The function used to composite the main and additional indicators is here
+ *      }
+ *    }
+ *  }
+ * }
+ */
 const eurostat_indicators = {
   GDP: {
     endpoint: 'nama_10r_3gdp',
@@ -29,7 +69,8 @@ const eurostat_indicators = {
         additional_data: {
           endpoint: 'reg_area3',
           landuse: 'TOTAL',
-          operation: 'main / additional',
+          unit: 'KM2',
+          operation: (main, additional) => main / additional,
         },
       },
     },
@@ -55,7 +96,7 @@ const eurostat_indicators = {
         additional_data: {
           endpoint: 'nama_10r_3gva',
           nace_r2: 'TOTAL',
-          operation: '( main / additional ) * 100',
+          operation: (main, additional) => (main / additional) * 100,
         },
       },
       GVAind: {
@@ -66,7 +107,7 @@ const eurostat_indicators = {
         additional_data: {
           endpoint: 'nama_10r_3gva',
           nace_r2: 'TOTAL',
-          operation: '( main / additional ) * 100',
+          operation: (main, additional) => (main / additional) * 100,
         },
       },
       GVAmnf: {
@@ -77,7 +118,7 @@ const eurostat_indicators = {
         additional_data: {
           endpoint: 'nama_10r_3gva',
           nace_r2: 'TOTAL',
-          operation: '( main / additional ) * 100',
+          operation: (main, additional) => (main / additional) * 100,
         },
       },
       GVAcnstr: {
@@ -88,7 +129,7 @@ const eurostat_indicators = {
         additional_data: {
           endpoint: 'nama_10r_3gva',
           nace_r2: 'TOTAL',
-          operation: '( main / additional ) * 100',
+          operation: (main, additional) => (main / additional) * 100,
         },
       },
       GVAgr: {
@@ -160,7 +201,7 @@ const eurostat_indicators = {
           age: 'Y15-64',
           sex: 'T',
           nace_r2: 'TOTAL',
-          operation: '( main / additional ) * 100',
+          operation: (main, additional) => (main / additional) * 100,
         },
       },
       EMPLf: {
@@ -175,7 +216,7 @@ const eurostat_indicators = {
           age: 'Y15-64',
           sex: 'T',
           nace_r2: 'TOTAL',
-          operation: '( main / additional ) * 100',
+          operation: (main, additional) => (main / additional) * 100,
         },
       },
       EMPLind: {
@@ -190,7 +231,7 @@ const eurostat_indicators = {
           age: 'Y15-64',
           sex: 'T',
           nace_r2: 'TOTAL',
-          operation: '( main / additional ) * 100',
+          operation: (main, additional) => (main / additional) * 100,
         },
       },
       EMPLcnstr: {
@@ -205,7 +246,7 @@ const eurostat_indicators = {
           age: 'Y15-64',
           sex: 'T',
           nace_r2: 'TOTAL',
-          operation: '( main / additional ) * 100',
+          operation: (main, additional) => (main / additional) * 100,
         },
       },
       EMPLr: {
@@ -299,7 +340,7 @@ const eurostat_indicators = {
           endpoint: 'lfst_r_lfp2act',
           age: 'Y15-64',
           sex: 'T',
-          operation: '( main / additional ) * 100',
+          operation: (main, additional) => (main / additional) * 100,
         },
       },
       COMTrf: {
@@ -313,7 +354,7 @@ const eurostat_indicators = {
           endpoint: 'lfst_r_lfp2act',
           age: 'Y15-64',
           sex: 'F',
-          operation: '( main / additional ) * 100',
+          operation: (main, additional) => (main / additional) * 100,
         },
       },
     },
@@ -491,7 +532,8 @@ const eurostat_indicators = {
         additional_data: {
           endpoint: 'reg_area3',
           landuse: 'TOTAL',
-          operation: '( main / ( additional * 100 ) ) * 100',
+          unit: 'KM2',
+          operation: (main, additional) => (main / (additional * 100)) * 100,
         },
       },
       IRRagr: {
@@ -502,7 +544,8 @@ const eurostat_indicators = {
         additional_data: {
           endpoint: 'reg_area3',
           landuse: 'TOTAL',
-          operation: '( main / ( additional * 100 ) ) * 100',
+          unit: 'KM2',
+          operation: (main, additional) => (main / (additional * 100)) * 100,
         },
       },
       IRRuaa: {
@@ -513,7 +556,7 @@ const eurostat_indicators = {
         additional_data: {
           endpoint: 'ef_poirrig',
           landuse: 'B_6_2_1_HA',
-          operation: '( additional / ( main * 100 ) ) * 100',
+          operation: (main, additional) => (additional / (main * 100)) * 100,
         },
       },
     },
@@ -687,7 +730,7 @@ const eurostat_indicators = {
           unit: 'NR',
           sex: 'T',
           age: 'TOTAL',
-          operation: 'main / additional',
+          operation: (main, additional) => main / additional,
         },
       },
     },
@@ -709,38 +752,56 @@ const eurostat_indicators = {
 // ENTRIES WITH todo: 'TODO' ARE CALCULATED IN WAYS I DON'T UNDERSTAND, TO_ASK
 
 module.exports = {
+  /**
+   * Run all the needed queries for all of the indicators
+   * @returns {Object} The data object with all of the data from all of the indicators
+   */
   fetch_all: () => {
     var data = {};
-
-    Object.keys(eurostat_indicators).map((category_name) => {
+    //Iterate over indicator categories
+    Object.keys(eurostat_indicators).forEach((category_name) => {
       const root_endpoint = eurostat_indicators[category_name].endpoint;
       const indicators = eurostat_indicators[category_name].indicators;
-      Object.keys(indicators).map((indicator_name) => {
-        if (indicator_name == 'GDP') {
-          //DO NOTHING UNLESS ON THE FIRST ELEMENT (FASTER TESTING AND NO UNNECESSARY REQUESTS)
+      //Iterate over iterators for every category
+      Object.keys(indicators).forEach((indicator_name) => {
+        //Get the name of the indicator
+        const indicator =
+          eurostat_indicators[category_name].indicators[indicator_name];
+        if (indicator.todo) {
+          //TO_ASK
+        } else if (indicator_name == 'GDPdens') {
+          //DO NOTHING UNLESS ON THE GDPdens INDICATOR (FASTER TESTING AND NO UNNECESSARY REQUESTS)
           //TODO: BEFORE RUNNING ON ALL INDICATORS MAKE SURE TO EXCLUDE OR MANAGE COMPOSITE ONES
+          //Initialize object for current indicator
           data[indicator_name] = {};
-          const indicator =
-            eurostat_indicators[category_name].indicators[indicator_name];
+          //Endpoint can be common for all indicators of a category, have a common root for all indicators of a category
+          //or have the root indicator for a category be empty and be different for every indicator
           const endpoint = indicator.endpoint
             ? root_endpoint + indicator.endpoint
             : root_endpoint;
+          //Get all the needed parameters and remove those added by me to help with the rest of the logic
           const keys = Object.keys(indicator).filter((e) => {
-            return e !== 'desc';
+            return (
+              e !== 'desc' &&
+              e !== 'endpoint' &&
+              e !== 'composite' &&
+              e !== 'additional_data'
+            );
           });
+          //Build the query string
           var query_str = '';
           keys.forEach((key) => {
             query_str += `${key}=${indicator[key]}&`;
           });
           query_str += 'geoLevel=nuts2&precision=1';
 
-          //EUROSTAT API JSON FORMAT:
+          //EUROSTAT API JSON FORMAT (For GDP Indicator, should be at least similar for the other ones):
           //version (dataset version)
           //label (dataset description)
           //href (api address)
           //source (data source)
           //updated (last update date)
-          //status: (status for every location/year couple datapoint)
+          //status: (status for every location/year couple datapoint) !!!IMPORTANT!!! This may vary between datasets
           //  #: : / b / p / u / e / d
           //  legend:
           //  # = location_index * n_of_different_years + year_index
@@ -786,9 +847,11 @@ module.exports = {
           //  1: number_of_locations
           //  2: number_of_years
 
+          //Request the data from the API and transform it to json object
           fetch(`${eurostat_api_root}${endpoint}?${query_str}`)
             .then((res) => res.json())
             .then((json) => {
+              //Get a list of all the years in the dataset
               const year_codes = Object.keys(
                 json.dimension.time.category.index
               );
@@ -797,7 +860,7 @@ module.exports = {
                 years[json.dimension.time.category.index[year_code]] =
                   json.dimension.time.category.label[year_code];
               });
-
+              //Get a list of all the locations in the dataset
               const location_codes = Object.keys(
                 json.dimension.geo.category.index
               );
@@ -808,23 +871,155 @@ module.exports = {
                   json.dimension.geo.category.label[location_code],
                 ];
               });
-
+              //Populate the data object with all the data from the dataset in this format:
+              //data[location][year] = data
               Object.keys(locations).forEach((location_index) => {
                 data[indicator_name][locations[location_index][0]] = {};
                 Object.keys(years).forEach((year_index) => {
+                  //Get how many years are in the dataset
+                  const number_of_years =
+                    json.size[
+                      Object.keys(json.id).filter(
+                        (e) => json.id[e] === 'time'
+                      )[0]
+                    ];
+                  //Current index is location_index * n_of_different_years + year_index
                   const current_index =
-                    location_index * json.size[2] + 1 * year_index;
-                  if (json.status[current_index] === ':') {
-                    data[indicator_name][locations[location_index][0]][
-                      years[year_index]
-                    ] = null;
-                  } else {
-                    data[indicator_name][locations[location_index][0]][
-                      years[year_index]
-                    ] = json.value[current_index];
-                  }
+                    location_index * number_of_years + 1 * year_index;
+                  //If data is present, copy it, otherwise use null to mark it as missing
+                  data[indicator_name][locations[location_index][0]][
+                    years[year_index]
+                  ] = json.value[current_index]
+                    ? json.value[current_index]
+                    : null;
                 });
               });
+
+              if (indicator.composite) {
+                //COMPOSITE INDICATORS REQUIRE 2 QUERIES TO THE EUROSTAT API AND AN OPERATION BETWEEN CORRESPONDENT DATA FROM 2 DATASETS
+                //THE REQUIRED OPERATION IS WRITTEN IN THE OPERATION PARAMETER OF THE ADDITIONAL_DATA PARAMETER
+
+                //additional_data contains the data for the second query needed for composite indicators
+                //The rest of the code works the same way as that for the main query with little differences in the
+                //storage and amount of parameters to remove from the object
+                const additional_data_endpoint =
+                  indicator.additional_data.endpoint;
+                const additional_data_keys = Object.keys(
+                  indicator.additional_data
+                ).filter((e) => {
+                  return e !== 'desc' && e !== 'endpoint' && e !== 'operation';
+                });
+
+                const data_for_composite_indicator = {};
+                const operation = indicator.additional_data.operation;
+
+                var query_str = '';
+                additional_data_keys.forEach((key) => {
+                  query_str += `${key}=${indicator.additional_data[key]}&`;
+                });
+                query_str += 'geoLevel=nuts2&precision=1';
+                fetch(
+                  `${eurostat_api_root}${additional_data_endpoint}?${query_str}`
+                )
+                  .then((res) => res.json())
+                  .then((json) => {
+                    const year_codes = Object.keys(
+                      json.dimension.time.category.index
+                    );
+                    const years = {};
+                    year_codes.forEach((year_code) => {
+                      years[json.dimension.time.category.index[year_code]] =
+                        json.dimension.time.category.label[year_code];
+                    });
+                    const location_codes = Object.keys(
+                      json.dimension.geo.category.index
+                    );
+                    const locations = {};
+                    location_codes.forEach((location_code) => {
+                      locations[
+                        json.dimension.geo.category.index[location_code]
+                      ] = [
+                        location_code,
+                        json.dimension.geo.category.label[location_code],
+                      ];
+                    });
+
+                    Object.keys(locations).forEach((location_index) => {
+                      data_for_composite_indicator[
+                        locations[location_index][0]
+                      ] = {};
+
+                      Object.keys(years).forEach((year_index) => {
+                        const number_of_years =
+                          json.size[
+                            Object.keys(json.id).filter(
+                              (e) => json.id[e] === 'time'
+                            )[0]
+                          ];
+                        const current_index =
+                          location_index * number_of_years + 1 * year_index;
+                        data_for_composite_indicator[
+                          locations[location_index][0]
+                        ][years[year_index]] = json.value[current_index]
+                          ? json.value[current_index]
+                          : null;
+                      });
+                    });
+
+                    //Some datasets have a different amount of years of data so there has to be some kind of matching
+                    //At the moment the chosen method is to use the closest with a non null value
+                    //To do so I create an array with the years with a non-null value and call the get_closest_year function
+                    //which returns the year in the array (first parameter) closest to the target year (second parameter)
+                    //In case of ties it returns the most recent year
+                    Object.keys(data[indicator_name]).forEach(
+                      (location_name) => {
+                        if (data_for_composite_indicator[location_name]) {
+                          additional_data_years_for_current_location =
+                            Object.keys(
+                              data_for_composite_indicator[location_name]
+                            ).filter(
+                              (e) =>
+                                data_for_composite_indicator[location_name][
+                                  e
+                                ] !== null
+                            );
+
+                          Object.keys(
+                            data[indicator_name][location_name]
+                          ).forEach((year) => {
+                            const closest_year = get_closest_year(
+                              additional_data_years_for_current_location,
+                              year
+                            );
+
+                            //data[indicator_name][location_name][year] is modified by the operator function
+                            //and it becomes the composite version of the data (the previous value was temporary)
+                            data[indicator_name][location_name][year] =
+                              operation(
+                                data[indicator_name][location_name][year],
+                                data_for_composite_indicator[location_name][
+                                  closest_year
+                                ]
+                              );
+                          });
+                        } else {
+                          //If a location doesn't have any value in the additional_data dataset every year for that location is set to null
+                          Object.keys(
+                            data[indicator_name][location_name]
+                          ).forEach((year) => {
+                            data[indicator_name][location_name][year] = null;
+                          });
+                        }
+                        //THIS IS MOSTLY DONE
+                        //TODO: ADD EMPTY FIELDS FOR THE LOCATIONS THAT DON'T HAVE VALUES FOR THE CURRENT INDICATORS (USUALLY NON-EU COUNTRIES)
+                        //TODO: ADD DATABASE INTERACTION (WILL PROBABLY BE DONE IN ANOTHER FILE)
+                        //TODO: TEST WITH ALL OF THE INDICATORS AND COMPARE WITH DATA IN EXCEL FILE
+                        //TODO: REMOVE CONDITION THAT EXCLUDES ALL INDICATORS OTHER THAN ONE
+                        //TODO: ASK ABOUT DEPENDENCY INDICATORS AND HOW TO GET THE DATA FOR THOSE / TRY TO DECYPHER THE R CODE FOR THOSE
+                      }
+                    );
+                  });
+              }
             });
         }
       });

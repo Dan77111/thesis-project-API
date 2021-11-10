@@ -206,19 +206,130 @@ const get_indicator_data = (
 };
 
 /**
- *
- * @returns {object} The object with the data on the indicator to be composited with other indicators or saved
+ * Fetch the indicator passed as parameter and return an Object containing its data to be saved
+ * @param {object} indicator The object containing the info about the indicator to be fetched
+ * @param {string} root_endpoint The root of the endpoint from which the indicator is fetched.
+ * @returns {object} The data fetched from the indicator
  */
-const fetch_indicator = () => {
-  //TODO
-  return indicator;
+const fetch_indicator = (indicator, root_endpoint) => {
+  //Endpoint can be common for all indicators of a category, have a common root for all indicators of a category
+  //or have the root indicator for a category be empty and be different for every indicator
+  const endpoint = indicator.endpoint
+    ? root_endpoint + indicator.endpoint
+    : root_endpoint;
+
+  //Combined parameter and combination operator are for indicators that need multiple values for the same parameter
+  //(e.g. different age values) and combine them with some operation before using them (e.g. sum of age values to create
+  //custom age intervals)
+  const { combined_parameter, combined_parameter_instances, combining_operation } =
+    get_combined_parameter_data(indicator);
+
+  //Build the query string with all the needed parameters
+  const query_str = build_query_string(
+    indicator,
+    combined_parameter,
+    combined_parameter_instances
+  );
+
+  //Request the data from the API and transform it into a json object
+  fetch(`${eurostat_api_root}${endpoint}?${query_str}`)
+    .then((res) => res.json())
+    .then((json) => {
+      //Get the info needed for combined parameters (if present)
+      const combined_parameter_values = get_combined_parameter_values(
+        json.dimension,
+        combined_parameter
+      );
+
+      //Get the data on years and locations present in the JSON response
+      const { years, locations } = get_years_and_locations(json.dimension);
+
+      //Get the indicator data from the JSON response
+      const main_indicator_data = get_indicator_data(
+        years,
+        locations,
+        json.size,
+        json.id,
+        json.value,
+        combined_parameter,
+        combined_parameter_values,
+        combining_operation
+      );
+
+      if (!indicator.composite) {
+        //Return main indicator data if not composite
+        return main_indicator_data;
+      } else {
+        //COMPOSITE INDICATORS REQUIRE 2 QUERIES TO THE EUROSTAT API AND AN OPERATION BETWEEN CORRESPONDENT DATA FROM 2 DATASETS
+        //THE REQUIRED OPERATION IS WRITTEN IN THE OPERATION PARAMETER OF THE ADDITIONAL_DATA PARAMETER
+
+        //additional_data contains the data for the second query needed for composite indicators
+        //The rest of the code works roughly the same way as that for the main query
+        const additional_data_endpoint = indicator.additional_data.endpoint;
+
+        //Get the operation used to compose the datasets
+        const composition_operation =
+          indicator.additional_data.composition_operation;
+
+        //Combined parameter and combination operator are for indicators that need multiple values for the same parameter
+        //(e.g. different age values) and combine them with some operation before using them (e.g. sum of age values to create
+        //custom age intervals)
+        const {
+          combined_parameter,
+          combined_parameter_instances,
+          combining_operation,
+        } = get_combined_parameter_data(indicator.additional_data);
+
+        //Build the query string with all the necessary parameters
+        const query_str = build_query_string(
+          indicator.additional_data,
+          combined_parameter,
+          combined_parameter_instances
+        );
+
+        //Fetch the data from the API and transform it into a JSON object
+        fetch(`${eurostat_api_root}${additional_data_endpoint}?${query_str}`)
+          .then((res) => res.json())
+          .then((json) => {
+            //Get the info needed for combined parameters (if present)
+            const combined_parameter_values = get_combined_parameter_values(
+              json.dimension,
+              combined_parameter
+            );
+
+            //Get the data on years and locations present in the JSON response
+            const { years, locations } = get_years_and_locations(json.dimension);
+
+            //Get the indicator data from the JSON response
+            const data_for_composite_indicator = get_indicator_data(
+              years,
+              locations,
+              json.size,
+              json.id,
+              json.value,
+              combined_parameter,
+              combined_parameter_values,
+              combining_operation
+            );
+
+            //Compose the two previously fetched indicators and return the resulting object
+            return compose_indicator(
+              main_indicator_data,
+              data_for_composite_indicator,
+              composition_operation
+            );
+          });
+      }
+    });
 };
 
 /**
- *
- * @param {object} main_indicator_data
- * @param {object} data_for_composite_indicator
- * @returns
+ * Returns an object with the data from the main indicator composed with the data from the additional indicator
+ * composed via the composition operation
+ * @param {object} main_indicator_data The data from the main indicator
+ * @param {object} data_for_composite_indicator The data to be composed with the main indicator data
+ * @param {function} composition_operation The operation used to compose the data
+ * @returns {object} The object with the composed data
  */
 const compose_indicator = (
   main_indicator_data,
@@ -283,118 +394,17 @@ module.exports = {
           //DO NOTHING UNLESS ON THE INDICATOR I'M CURRENTLY TESTING (FASTER TESTING AND NO UNNECESSARY REQUESTS)
           //TODO: BEFORE RUNNING ON ALL INDICATORS MAKE SURE TO PROPERLY TEST THEM ONE AT A TIME
           //Initialize object for current indicator
-          data[indicator_name] = {};
-          //Endpoint can be common for all indicators of a category, have a common root for all indicators of a category
-          //or have the root indicator for a category be empty and be different for every indicator
-          const endpoint = indicator.endpoint
-            ? root_endpoint + indicator.endpoint
-            : root_endpoint;
+          data[indicator_name] = fetch_indicator(indicator, root_endpoint);
 
-          //Combined parameter and combination operator are for indicators that need multiple values for the same parameter
-          //(e.g. different age values) and combine them with some operation before using them (e.g. sum of age values to create
-          //custom age intervals)
-          const {
-            combined_parameter,
-            combined_parameter_instances,
-            combining_operation,
-          } = get_combined_parameter_data(indicator);
-
-          //Build the query string with all the needed parameters
-          const query_str = build_query_string(
-            indicator,
-            combined_parameter,
-            combined_parameter_instances
-          );
-
-          //Request the data from the API and transform it to json object
-          fetch(`${eurostat_api_root}${endpoint}?${query_str}`)
-            .then((res) => res.json())
-            .then((json) => {
-              //get needed info for combined parameters (if present)
-              const combined_parameter_values = get_combined_parameter_values(
-                json.dimension,
-                combined_parameter
-              );
-
-              const { years, locations } = get_years_and_locations(json.dimension);
-
-              //Populate the data object with all the data from the dataset in this format:
-              //data[indicator_name][location][year] = data
-              const main_indicator_data = get_indicator_data(
-                years,
-                locations,
-                json.size,
-                json.id,
-                json.value,
-                combined_parameter,
-                combined_parameter_values,
-                combining_operation
-              );
-
-              if (!indicator.composite) {
-                //Save main indicator data if not composite
-                data[indicator_name] = main_indicator_data;
-              } else {
-                //COMPOSITE INDICATORS REQUIRE 2 QUERIES TO THE EUROSTAT API AND AN OPERATION BETWEEN CORRESPONDENT DATA FROM 2 DATASETS
-                //THE REQUIRED OPERATION IS WRITTEN IN THE OPERATION PARAMETER OF THE ADDITIONAL_DATA PARAMETER
-
-                //additional_data contains the data for the second query needed for composite indicators
-                //The rest of the code works the same way as that for the main query with little differences in the
-                //storage and amount of parameters to remove from the object
-                const additional_data_endpoint = indicator.additional_data.endpoint;
-
-                const composition_operation =
-                  indicator.additional_data.composition_operation;
-
-                const {
-                  combined_parameter,
-                  combined_parameter_instances,
-                  combining_operation,
-                } = get_combined_parameter_data(indicator.additional_data);
-
-                const query_str = build_query_string(
-                  indicator.additional_data,
-                  combined_parameter,
-                  combined_parameter_instances
-                );
-
-                fetch(`${eurostat_api_root}${additional_data_endpoint}?${query_str}`)
-                  .then((res) => res.json())
-                  .then((json) => {
-                    const combined_parameter_values = get_combined_parameter_values(
-                      json.dimension,
-                      combined_parameter
-                    );
-
-                    const { years, locations } = get_years_and_locations(
-                      json.dimension
-                    );
-
-                    const data_for_composite_indicator = get_indicator_data(
-                      years,
-                      locations,
-                      json.size,
-                      json.id,
-                      json.value,
-                      combined_parameter,
-                      combined_parameter_values,
-                      combining_operation
-                    );
-
-                    data[indicator_name] = compose_indicator(
-                      main_indicator_data,
-                      data_for_composite_indicator,
-                      composition_operation
-                    );
-                    //THIS IS MOSTLY DONE
-                    //TODO: ADD EMPTY FIELDS FOR THE LOCATIONS THAT DON'T HAVE VALUES FOR THE CURRENT INDICATORS (USUALLY NON-EU COUNTRIES)
-                    //TODO: ADD DATABASE INTERACTION (WILL PROBABLY BE DONE IN ANOTHER FILE)
-                    //TODO: TEST WITH ALL OF THE INDICATORS AND COMPARE WITH DATA IN EXCEL FILE
-                    //TODO: REMOVE CONDITION THAT EXCLUDES ALL INDICATORS OTHER THAN ONE
-                    //TODO: FINISH COMBINED PARAMETER TESTING
-                  });
-              }
-            });
+          //THIS IS MOSTLY DONE
+          //TODO: ADD EMPTY FIELDS FOR THE LOCATIONS THAT DON'T HAVE VALUES FOR THE CURRENT INDICATORS (USUALLY NON-EU COUNTRIES)
+          //      WILL BE DONE IF NEEDED
+          //TODO: ADD DATABASE INTERACTION
+          //      WILL PROBABLY BE DONE IN ANOTHER FILE
+          //TODO: TEST WITH ALL OF THE INDICATORS AND COMPARE WITH DATA IN EXCEL FILE
+          //      IN PROGRESS
+          //TODO: REMOVE CONDITION THAT EXCLUDES ALL INDICATORS OTHER THAN ONE
+          //      WILL BE DONE AFTER TESTING
         }
       });
     });
@@ -470,16 +480,16 @@ current: {
 snapshots: {
   date: {
     indicator: {
-    location: {
-      year: {
-        value
+      location: {
+        year: {
+          value
+        },
+        ...
       },
       ...
     },
     ...
   }, 
-  ...
-  },
   ...
 }
 */

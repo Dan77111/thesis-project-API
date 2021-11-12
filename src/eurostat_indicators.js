@@ -53,20 +53,23 @@ module.exports = {
       },
     },
     GVA: {
-      endpoint: 'nama_10r_3gva',
+      endpoint: 'nama_10r_',
       indicators: {
         GVA: {
           desc: 'Gross Value added - Million Euro - (NUTS2, NUTS3)',
+          endpoint: '3gva',
           unit: 'MIO_EUR',
           nace_r2: 'TOTAL',
         },
         GVApc: {
           desc: 'Gross Value added per capita - Euro per person - (NUTS2,NUTS3)',
+          endpoint: '3gva',
           unit: 'MIO_EUR',
           nace_r2: 'TOTAL',
         },
         GVAagr: {
           desc: 'Gross Value added - Million Euro - (NUTS2, NUTS3 - Sector- Agriculture, forestry and fishing )',
+          endpoint: '3gva',
           unit: 'MIO_EUR',
           nace_r2: 'A',
           composite: 'true',
@@ -78,6 +81,7 @@ module.exports = {
         },
         GVAind: {
           desc: 'Gross Value added - Million Euro - (NUTS2, NUTS3 - Sector- Industry (except construction) )',
+          endpoint: '3gva',
           unit: 'MIO_EUR',
           nace_r2: 'B-E',
           composite: 'true',
@@ -89,6 +93,7 @@ module.exports = {
         },
         GVAmnf: {
           desc: 'Gross Value added - Million Euro - (NUTS2, NUTS3 - Sector - Manufacturing )',
+          endpoint: '3gva',
           unit: 'MIO_EUR',
           nace_r2: 'C',
           composite: 'true',
@@ -100,6 +105,7 @@ module.exports = {
         },
         GVAcnstr: {
           desc: 'Gross Value added - Million Euro - (NUTS2, NUTS3 - Sector - Construction )',
+          endpoint: '3gva',
           unit: 'MIO_EUR',
           nace_r2: 'F',
           composite: 'true',
@@ -111,7 +117,7 @@ module.exports = {
         },
         GVAgr: {
           desc: 'Real growth rate of regional gross value added (GVA) at basic prices - (NUTS2)',
-          endpoint: 'gr',
+          endpoint: '2gvagr',
           unit: 'I15',
         },
       },
@@ -633,13 +639,14 @@ module.exports = {
         IRRuaa: {
           desc: 'Irrigation- Irrigable land over the total utilized agricultural area (NUTS2)',
           irrig: 'TOTAL',
-          indic_ef: 'AGRAREA_HA',
+          indic_ef: 'B_6_2_1_HA',
           composite: 'true',
           additional_data: {
             endpoint: 'ef_poirrig',
-            landuse: 'B_6_2_1_HA',
+            irrig: 'TOTAL',
+            indic_ef: 'AGRAREA_HA',
             composition_operation: (main, additional) =>
-              (additional / (main * 100)) * 100,
+              (main / (additional * 100)) * 100,
           },
         },
       },

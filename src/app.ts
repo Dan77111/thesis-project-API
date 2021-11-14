@@ -50,13 +50,13 @@ app.use('/api/v1/current', (req, res) => {
   });
 });
 
-app.use('api/v1/snapshots/list', (req, res) => {
-  DataInstance.find({}, (err, data) => {
+app.use('/api/v1/snapshots/list', (req, res) => {
+  DataInstance.find({}, (err, dataInstances) => {
     if (err) {
       res.status(500).json({ error: 'DB Error' });
     } else {
       const dataObject: Map<number, string> = new Map();
-      data.forEach((dataInstance, index) => {
+      dataInstances.forEach((dataInstance, index) => {
         dataObject.set(
           index,
           `${dataInstance.date.getFullYear()}-${dataInstance.date.getMonth()}`
@@ -67,19 +67,18 @@ app.use('api/v1/snapshots/list', (req, res) => {
   });
 });
 
-app.use('/api/v1/snapshots/:date', (req, res) => {
-  const date = JSON.parse(req.params.date);
-  const month = date.month;
-  const year = date.year;
+app.use('/api/v1/snapshots/:month-:year', (req, res) => {
+  const month = req.params.month;
+  const year = req.params.year;
   DataInstance.findOne(
-    { date: { $gte: `${year}-${month}-1`, $lte: `${year}-${month + 1}-1` } },
-    (err: mongoose.NativeError, data: any) => {
+    { date: { $gte: `${year}-${month}-1`, $lt: `${year}-${Number(month) + 1}-1` } },
+    (err: mongoose.NativeError, dataInstance: any) => {
       if (err) {
         res.status(500).json({ error: 'DB Error' });
       } else {
         const dataObject: Map<string, any> = new Map();
-        Object.keys(data.data).forEach((indicatorName) => {
-          dataObject.set(indicatorName, JSON.parse(data.data[indicatorName]));
+        dataInstance.data.forEach((jsonString: string, indicatorName: string) => {
+          dataObject.set(indicatorName, JSON.parse(jsonString));
         });
         res.status(200).json(Object.fromEntries(dataObject));
       }

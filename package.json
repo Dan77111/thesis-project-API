@@ -7,6 +7,8 @@
     "prebuild": "tslint -c tslint.json -p tsconfig.json --fix",
     "build": "tsc",
     "start": "node .",
+    "predebug": "npm run build",
+    "debug": "npm run start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Daniele Dalla Rosa",

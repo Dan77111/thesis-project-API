@@ -3,6 +3,7 @@ dotenv.config();
 import express from 'express';
 import schedule from 'node-schedule';
 import mongoose from 'mongoose';
+import cors from 'cors';
 import Logger from './lib/logger';
 import { DataInstance } from './models/data_instance';
 import { Indicator } from './models/indicator';
@@ -35,6 +36,8 @@ const saveSnapshot: schedule.Job = schedule.scheduleJob('* * 1 * *', () => {
     }
   });
 });
+
+app.use(cors());
 
 app.use('/api/v1/current', (req, res) => {
   Indicator.find({}, (err, data) => {

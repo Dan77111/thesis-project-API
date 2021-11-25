@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import { eurostatIndicators } from './eurostat_indicators';
 import Logger from './lib/logger';
+import { Description } from './models/description';
 const eurostatApiRoot: string = process.env.EUROSTAT_API;
 import { Indicator } from './models/indicator';
 
@@ -10,6 +11,7 @@ type ESIndicator = {
   composition_operation: CompositionFunction;
   endpoint: string;
   additional_data: ESIndicator;
+  desc: string;
   [key: string]:
     | string
     | ESIndicator
@@ -314,6 +316,9 @@ const saveIndicator = (indicatorName: string, indicatorData: ESIndicatorData) =>
  * Fetch all the indicators and save results in the current collection of the DB
  */
 const fetchAll = () => {
+  // save a list of all the indicator and location names with their description
+  const indicatorDescriptions: Map<string, string> = new Map();
+
   // Iterate over indicator categories
   Object.keys(eurostatIndicators).forEach((categoryName: string) => {
     // @ts-ignore
@@ -323,10 +328,11 @@ const fetchAll = () => {
     // Iterate over indicators for every category
     Object.keys(indicators).forEach((indicatorName: string) => {
       // Get the indicator from its name
-
       const indicator: ESIndicator =
         // @ts-ignore
         eurostatIndicators[categoryName].indicators[indicatorName];
+
+      indicatorDescriptions.set(indicatorName, indicator.desc);
 
       // Initialize object for current indicator
       // Endpoint can be common for all indicators of a category, have a common root for all indicators of a category
@@ -455,11 +461,41 @@ const fetchAll = () => {
     // TODO: TEST WITH ALL OF THE INDICATORS AND COMPARE WITH DATA IN EXCEL FILE
     //      IN PROGRESS
   });
+  const indicatorDescription = new Description({
+    name: 'indicators',
+    data: indicatorDescriptions,
+  });
+  Description.deleteOne({ name: 'indicators' }).then(() => {
+    indicatorDescription.save();
+  });
+  // This indicator has a value for every NUTS2 region so it is used to create a list with all of them
+  // This is not an optimal solution but I use it for now to start working on the React part
+  fetch(
+    `${eurostatApiRoot}demo_r_pjangrp3?geoLevel=nuts2&filterNonGeo=1&precision=1&sex=T&lastTimePeriod=1&unit=NR&age=TOTAL`
+  )
+    .then((res) => res.json())
+    .then((json) => {
+      const locationDescriptions: Map<string, string> = new Map();
+      Object.keys(json.dimension.geo.category.label).forEach((locationCode) => {
+        locationDescriptions.set(
+          locationCode,
+          json.dimension.geo.category.label[locationCode]
+        );
+      });
+
+      const locationsDescription = new Description({
+        name: 'locations',
+        data: locationDescriptions,
+      });
+      Description.deleteOne({ name: 'locations' }).then(() => {
+        locationsDescription.save();
+      });
+    });
 };
 
 // EUROPEAN QUALITY OF GOVERNMENT INDEX MISSING
 
-export { fetchAll as fetch_all };
+export { fetchAll };
 
 // EUROSTAT API JSON FORMAT (For GDP Indicator, the other ones are slightly different in the nmber of parameters and status codes):
 // version (dataset version)

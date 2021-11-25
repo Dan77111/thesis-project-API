@@ -7,20 +7,24 @@ import cors from 'cors';
 import Logger from './lib/logger';
 import { DataInstance } from './models/data_instance';
 import { Indicator } from './models/indicator';
+import { currentRoute } from './routes/current';
 
-import { fetch_all } from './eurostat_fetcher';
+import { fetchAll } from './eurostat_fetcher';
 const app = express();
 
 // @ts-ignore
 mongoose.connect(process.env.DB_URI, { useNewUrlParser: true });
 
-const fetchData: schedule.Job = schedule.scheduleJob('0 * * * *', () => {
+const fetchData: schedule.Job = schedule.scheduleJob('0 0 * * 0', () => {
   // Get all necessary data from eurostat API and save in DB as current data
-  // This happens every hour
-  fetch_all();
+  // This happens every day
+  // PROBLEM: Rarely the fetchAll fails due to ECONNRESET,
+  // REASON: maybe eurostat is restricting queries from my IP for too many requests during testing?
+  // SOLUTION: It will probably not be a problem once the fetchAll happens only once a day
+  fetchAll();
 });
 
-const saveSnapshot: schedule.Job = schedule.scheduleJob('* * 1 * *', () => {
+const saveSnapshot: schedule.Job = schedule.scheduleJob('0 0 1 * *', () => {
   // Save data in DB as historic data snapshot
   // This should happen every month on the 1st
   Indicator.find({}, (err, data) => {
@@ -39,19 +43,7 @@ const saveSnapshot: schedule.Job = schedule.scheduleJob('* * 1 * *', () => {
 
 app.use(cors());
 
-app.use('/api/v1/current', (req, res) => {
-  Indicator.find({}, (err, data) => {
-    if (err) {
-      res.status(500).json({ error: 'DB Error' });
-    } else {
-      const dataObject: Map<string, any> = new Map();
-      data.forEach((indicator) => {
-        dataObject.set(indicator.name, JSON.parse(indicator.json_dump));
-      });
-      res.status(200).json(Object.fromEntries(dataObject));
-    }
-  });
-});
+app.use('/api/v1/current', currentRoute);
 
 app.use('/api/v1/snapshots/list', (req, res) => {
   DataInstance.find({}, (err, dataInstances) => {
@@ -70,6 +62,7 @@ app.use('/api/v1/snapshots/list', (req, res) => {
   });
 });
 
+//This will have to be changed to comply to the same format as the /current route but for now it's not needed in building the React app
 app.use('/api/v1/snapshots/:month-:year', (req, res) => {
   const month = req.params.month;
   const year = req.params.year;

@@ -1,4 +1,4 @@
-# CMCC-RAAS-project-API
+# thesis-project-API
 The API part of my thesis project for CMCC-RAAS
 ## What it does
 This API fetches data from the Eurostat JSON API every hour and reformats it to be more easily usable by the frontend part of the project. Then it saves it in a MongoDB cluster. Every month it saves a snapshot of all the indicators' data.

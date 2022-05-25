@@ -31,9 +31,14 @@ const saveSnapshot: schedule.Job = schedule.scheduleJob('0 0 1 * *', () => {
     if (err) {
       Logger.error('DB Error');
     } else {
-      const dataObject: Map<string, string> = new Map();
+      const dataObject: Map<string, any[]> = new Map();
       data.forEach((indicator) => {
-        dataObject.set(indicator.name, indicator.json_dump);
+        dataObject.set(indicator.name, [
+          indicator.default_year,
+          indicator.type,
+          indicator.uom,
+          indicator.json_dump,
+        ]);
       });
       const dataSnaphot = new DataInstance({ data: dataObject, date: new Date() });
       dataSnaphot.save();
@@ -44,6 +49,11 @@ const saveSnapshot: schedule.Job = schedule.scheduleJob('0 0 1 * *', () => {
 app.use(cors());
 
 app.use('/api/v1/current', currentRoute);
+
+app.use('/api/v1/test', (req, res) => {
+  fetchAll();
+  res.status(200).json('Done');
+});
 
 app.use('/api/v1/snapshots/list', (req, res) => {
   DataInstance.find({}, (err, dataInstances) => {
@@ -62,24 +72,11 @@ app.use('/api/v1/snapshots/list', (req, res) => {
   });
 });
 
-//This will have to be changed to comply to the same format as the /current route but for now it's not needed in building the React app
+// This will be done similar to the /current endpoint but due to time constraints it's still empty
 app.use('/api/v1/snapshots/:month-:year', (req, res) => {
   const month = req.params.month;
   const year = req.params.year;
-  DataInstance.findOne(
-    { date: { $gte: `${year}-${month}-1`, $lt: `${year}-${Number(month) + 1}-1` } },
-    (err: mongoose.NativeError, dataInstance: any) => {
-      if (err) {
-        res.status(500).json({ error: 'DB Error' });
-      } else {
-        const dataObject: Map<string, any> = new Map();
-        dataInstance.data.forEach((jsonString: string, indicatorName: string) => {
-          dataObject.set(indicatorName, JSON.parse(jsonString));
-        });
-        res.status(200).json(Object.fromEntries(dataObject));
-      }
-    }
-  );
+  // TODO: This
 });
 
 app.use((req, res) => {

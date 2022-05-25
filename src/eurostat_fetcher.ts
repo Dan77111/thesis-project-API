@@ -1,28 +1,25 @@
 import fetch from 'node-fetch';
-import { eurostatIndicators } from './eurostat_indicators';
+import {
+  eurostatIndicators,
+  CombinationFunction,
+  CompositionFunction,
+} from './eurostat_indicators';
 import Logger from './lib/logger';
 import { Description } from './models/description';
 const eurostatApiRoot: string = process.env.EUROSTAT_API;
 import { Indicator } from './models/indicator';
+import { parse } from 'csv-parse';
+import { get } from 'https';
 
 type ESIndicator = {
-  combined_parameter: string;
-  combining_operation: CombinationFunction;
-  composition_operation: CompositionFunction;
-  endpoint: string;
-  additional_data: ESIndicator;
+  combined_parameter?: string;
+  combining_operation?: CombinationFunction;
+  composition_operation?: CompositionFunction;
+  endpoint?: string;
+  additional_data?: ESIndicator;
   desc: string;
-  [key: string]:
-    | string
-    | ESIndicator
-    | CompositionFunction
-    | CombinationFunction
-    | string[];
+  [key: string]: any;
 };
-
-type CompositionFunction = (main: number, additional: number) => number;
-
-type CombinationFunction = (parameterList: number[]) => number;
 
 type JSONDimension = {
   [key: string]: {
@@ -117,6 +114,9 @@ const buildQueryString = (
       e !== 'desc' &&
       e !== 'endpoint' &&
       e !== 'composite' &&
+      e !== 'default_year' &&
+      e !== 'uom' &&
+      e !== 'uom_d' &&
       e !== 'composition_operation' &&
       e !== 'additional_data' &&
       e !== 'combined_parameter' &&
@@ -302,9 +302,18 @@ const composeIndicator = (
   return compositeData;
 };
 
-const saveIndicator = (indicatorName: string, indicatorData: ESIndicatorData) => {
+const saveIndicator = (
+  indicatorName: string,
+  indicatorData: ESIndicatorData,
+  defaultYear: number,
+  type: string,
+  uom: string
+) => {
   const currentIndicator = new Indicator({
     name: indicatorName,
+    default_year: defaultYear,
+    uom,
+    type,
     json_dump: JSON.stringify(indicatorData),
   });
   Indicator.deleteOne({ name: indicatorName }).then(() => {
@@ -318,6 +327,7 @@ const saveIndicator = (indicatorName: string, indicatorData: ESIndicatorData) =>
 const fetchAll = () => {
   // save a list of all the indicator and location names with their description
   const indicatorDescriptions: Map<string, string> = new Map();
+  const uomDescriptions: Map<string, string> = new Map();
 
   // Iterate over indicator categories
   Object.keys(eurostatIndicators).forEach((categoryName: string) => {
@@ -331,6 +341,8 @@ const fetchAll = () => {
       const indicator: ESIndicator =
         // @ts-ignore
         eurostatIndicators[categoryName].indicators[indicatorName];
+
+      uomDescriptions.set(indicatorName, indicator.uom_d);
 
       indicatorDescriptions.set(indicatorName, indicator.desc);
 
@@ -386,7 +398,13 @@ const fetchAll = () => {
         .then(() => {
           if (!indicator.composite) {
             // Return main indicator data if not composite
-            saveIndicator(indicatorName, mainIndicatorData);
+            saveIndicator(
+              indicatorName,
+              mainIndicatorData,
+              indicator.default_year,
+              eurostatIndicators[categoryName].type,
+              indicator.uom
+            );
           } else {
             // Composite indicators require 2 queries to the Eurostat API and an operation between the correspondent data from the 2 resulting datasets
             // The required operation is in the composition_operation parameter of the additional_data Object. It is stored as a function
@@ -450,26 +468,38 @@ const fetchAll = () => {
                 );
               })
               .then(() => {
-                saveIndicator(indicatorName, compositeData);
+                saveIndicator(
+                  indicatorName,
+                  compositeData,
+                  indicator.default_year,
+                  eurostatIndicators[categoryName].type,
+                  indicator.uom
+                );
               });
           }
         });
     });
-    // THIS IS MOSTLY DONE
     // TODO: ADD EMPTY FIELDS FOR THE LOCATIONS THAT DON'T HAVE VALUES FOR THE CURRENT INDICATORS (USUALLY NON-EU COUNTRIES)
     //      WILL BE DONE IF NEEDED
-    // TODO: TEST WITH ALL OF THE INDICATORS AND COMPARE WITH DATA IN EXCEL FILE
-    //      IN PROGRESS
   });
+  // Manually add description for EQI Indicator, the data is added separately
+  indicatorDescriptions.set('EQI', 'European Quality of Government');
   const indicatorDescription = new Description({
     name: 'indicators',
     data: indicatorDescriptions,
+  });
+  uomDescriptions.set('EQI', 'European Index, Average = 0');
+  const uomDescription = new Description({
+    name: 'uom',
+    data: uomDescriptions,
+  });
+  Description.deleteOne({ name: 'uom' }).then(() => {
+    uomDescription.save();
   });
   Description.deleteOne({ name: 'indicators' }).then(() => {
     indicatorDescription.save();
   });
   // This indicator has a value for every NUTS2 region so it is used to create a list with all of them
-  // This is not an optimal solution but I use it for now to start working on the React part
   fetch(
     `${eurostatApiRoot}demo_r_pjangrp3?geoLevel=nuts2&filterNonGeo=1&precision=1&sex=T&lastTimePeriod=1&unit=NR&age=TOTAL`
   )
@@ -490,10 +520,38 @@ const fetchAll = () => {
       Description.deleteOne({ name: 'locations' }).then(() => {
         locationsDescription.save();
       });
+    })
+    .then(() => {
+      // Separately save the EQI Data, read from a CSV
+      getEQI();
     });
 };
 
-// EUROPEAN QUALITY OF GOVERNMENT INDEX MISSING
+// EUROPEAN QUALITY OF GOVERNMENT INDEX PARSED FROM CSV
+const getEQI = () => {
+  const parser = parse({ columns: false }, (err, records) => {
+    const EQIDataTemp = records
+      .map((line: any, index: number) => {
+        return [line[1], line[3], line[10]];
+      })
+      .slice(1);
+    const EQIData: ESIndicatorData = {};
+    EQIDataTemp.forEach((entry: string[]) => {
+      const location = entry[0];
+      const year = entry[1];
+      const value = entry[2];
+      if (!EQIData[location]) {
+        EQIData[location] = {};
+      }
+      EQIData[location][year] = parseFloat(value);
+    });
+
+    saveIndicator('EQI', EQIData, 2017, 'Index', 'INSTITUTIONS');
+  });
+  get('https://www.qogdata.pol.gu.se/data/eqi_data_long21.csv', (stream) => {
+    stream.pipe(parser);
+  });
+};
 
 export { fetchAll };
 
@@ -503,16 +561,7 @@ export { fetchAll };
 // href (api address)
 // source (data source)
 // updated (last update date)
-// status: (status for every location/year couple datapoint) !!!IMPORTANT!!! This may vary between datasets
-//  #: : / b / p / u / e / d
-//  legend:
-//  # = location_index * n_of_different_years + year_index
-//  : = not available
-//  b = break in time series
-//  p = provisional
-//  u = low reliability
-//  e = estimated
-//  d = definition differs (see metadata)
+// status: (status for every location/year couple datapoint) This varies between datasets
 // extension (dataset info)
 // value: (values for every location/year couple datapoint except the ones marked by : in status)
 //  #: value

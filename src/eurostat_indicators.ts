@@ -282,7 +282,7 @@ const eurostatIndicators: IndicatorAPIData = {
         wstatus: 'EMP',
       },
       EMPLeap: {
-        desc: 'Employment - by Age - 15-64)',
+        desc: 'Employment - by Age - 15-64',
         endpoint: 'lfst_r_lfe2emp',
         uom: 'K People',
         uom_d: 'Thousands of People',
@@ -291,7 +291,7 @@ const eurostatIndicators: IndicatorAPIData = {
         sex: 'T',
       },
       EMPLf: {
-        desc: 'Employment - by Sex - Female)',
+        desc: 'Employment - by Sex - Female',
         endpoint: 'lfst_r_lfe2emp',
         uom: 'K People',
         uom_d: 'Thousands of People',
@@ -300,7 +300,7 @@ const eurostatIndicators: IndicatorAPIData = {
         sex: 'F',
       },
       EMPLagr: {
-        desc: 'Employment - by Sector - Agriculture, Forestry and Fishing)',
+        desc: 'Employment - by Sector - Agriculture, Forestry and Fishing',
         endpoint: 'lfst_r_lfe2en2',
         uom: 'K People',
         uom_d: 'Thousands of People',
@@ -338,7 +338,7 @@ const eurostatIndicators: IndicatorAPIData = {
         },
       },
       EMPLcnstr: {
-        desc: 'Employment - by Sector - Construction)',
+        desc: 'Employment - by Sector - Construction',
         endpoint: 'lfst_r_lfe2en2',
         uom: 'K People',
         uom_d: 'Thousands of People',
@@ -357,7 +357,7 @@ const eurostatIndicators: IndicatorAPIData = {
         },
       },
       EMPLr: {
-        desc: 'Employment Rate - by Age - 15-64)',
+        desc: 'Employment Rate - by Age - 15-64',
         endpoint: 'lfst_r_lfe2emprt',
         uom: '%',
         uom_d: 'Percentage',
@@ -366,7 +366,7 @@ const eurostatIndicators: IndicatorAPIData = {
         sex: 'T',
       },
       EMPLrf: {
-        desc: 'Employment rate - by Sex - Female)',
+        desc: 'Employment rate - by Sex - Female',
         endpoint: 'lfst_r_lfe2emprt',
         uom: '%',
         uom_d: 'Percentage',
@@ -385,7 +385,7 @@ const eurostatIndicators: IndicatorAPIData = {
         nace_r2: 'HTC',
       },
       EMPLktf: {
-        desc: 'Employment in Technology and Knowledge-Intensive Sectors - by Sex - Female)',
+        desc: 'Employment in Technology and Knowledge-Intensive Sectors - by Sex - Female',
         endpoint: 'htec_emp_reg2',
         uom: '%',
         uom_d: 'Percentage of Total Employment',
@@ -395,7 +395,7 @@ const eurostatIndicators: IndicatorAPIData = {
         nace_r2: 'HTC',
       },
       UEMPL: {
-        desc: 'Unemployment - by Age - 15-74)',
+        desc: 'Unemployment - by Age - 15-74',
         endpoint: 'lfst_r_lfu3pers',
         uom: 'K People',
         uom_d: 'Thousands of People',
@@ -405,7 +405,7 @@ const eurostatIndicators: IndicatorAPIData = {
         isced11: 'TOTAL',
       },
       UEMPLf: {
-        desc: 'Unemployment - by Sex - Female)',
+        desc: 'Unemployment - by Sex - Female',
         endpoint: 'lfst_r_lfu3pers',
         uom: 'K People',
         uom_d: 'Thousands of People',
@@ -415,7 +415,7 @@ const eurostatIndicators: IndicatorAPIData = {
         isced11: 'TOTAL',
       },
       UEMPLr: {
-        desc: 'Unemployment Rate - by Age - 15-74)',
+        desc: 'Unemployment Rate - by Age - 15-74',
         endpoint: 'lfst_r_lfu3rt',
         uom: '%',
         uom_d: 'Percentage',
@@ -425,7 +425,7 @@ const eurostatIndicators: IndicatorAPIData = {
         isced11: 'TOTAL',
       },
       UEMPLrf: {
-        desc: 'Unemployment Rate - by Sex - Female)',
+        desc: 'Unemployment Rate - by Sex - Female',
         endpoint: 'lfst_r_lfu3rt',
         uom: '%',
         uom_d: 'Percentage',
@@ -446,7 +446,7 @@ const eurostatIndicators: IndicatorAPIData = {
         isced11: 'TOTAL',
       },
       LUEMPLrf: {
-        desc: 'Long Term Unemployment Rate - by Sex - Female)',
+        desc: 'Long Term Unemployment Rate - by Sex - Female',
         endpoint: 'lfst_r_lfu2ltu',
         uom: '%',
         uom_d: 'Percentage',
@@ -491,7 +491,7 @@ const eurostatIndicators: IndicatorAPIData = {
         },
       },
       COMTrf: {
-        desc: 'Commuting Rate - Outside the Region - by Sex - Female)',
+        desc: 'Commuting Rate - Outside the Region - by Sex - Female',
         endpoint: 'lfst_r_lfe2ecomm',
         uom: '%',
         uom_d: 'Percentage',
@@ -680,7 +680,7 @@ const eurostatIndicators: IndicatorAPIData = {
     type: 'TBD',
     indicators: {
       LE: {
-        desc: 'Life Expectancy - by Age - Less than 1 Year)',
+        desc: 'Life Expectancy - by Age - Less than 1 Year',
         age: 'Y_LT1',
         sex: 'T',
         uom: 'Y',
@@ -688,7 +688,7 @@ const eurostatIndicators: IndicatorAPIData = {
         default_year: 2018,
       },
       LEf: {
-        desc: 'Life expectancy - by Sex - Female - by Age - Less than 1 Year)',
+        desc: 'Life expectancy - by Sex - Female - by Age - Less than 1 Year',
         age: 'Y_LT1',
         sex: 'F',
         uom: 'Y',
@@ -696,7 +696,7 @@ const eurostatIndicators: IndicatorAPIData = {
         default_year: 2018,
       },
       LEm: {
-        desc: 'Life expectancy - Year - by Sex - Male - by Age - Less than 1 Year)',
+        desc: 'Life expectancy - Year - by Sex - Male - by Age - Less than 1 Year',
         age: 'Y_LT1',
         sex: 'M',
         uom: 'Y',
@@ -718,7 +718,7 @@ const eurostatIndicators: IndicatorAPIData = {
         default_year: 2007,
       },
       LUSh: {
-        desc: 'Livestock - LSU of the Holdings with Livestock - Number of Farms and Heads of Animals by Livestock Units of Farm)',
+        desc: 'Livestock - LSU of the Holdings with Livestock - Number of Farms and Heads of Animals by Livestock Units of Farm',
         lsu: 'TOTAL',
         indic_ef: 'C_LIVESTOCK_LSU',
         uom: 'LSU',
@@ -772,7 +772,7 @@ const eurostatIndicators: IndicatorAPIData = {
         default_year: 2015,
       },
       LCwa: {
-        desc: 'Land Cover Overview - Water)',
+        desc: 'Land Cover Overview - Water',
         landcover: 'LCG',
         unit: 'PC',
         uom: '%',

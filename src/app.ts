@@ -10,6 +10,7 @@ import { Indicator } from './models/indicator';
 import { currentRoute } from './routes/current';
 
 import { fetchAll } from './eurostat_fetcher';
+import { elaboratedRoute } from './routes/elaborated';
 const app = express();
 
 // @ts-ignore
@@ -49,6 +50,11 @@ const saveSnapshot: schedule.Job = schedule.scheduleJob('0 0 1 * *', () => {
 app.use(cors());
 
 app.use('/api/v1/current', currentRoute);
+
+app.use(
+  '/api/v1/elaborated/inds=:inds&locations=:locations&std=:std&method=:method',
+  elaboratedRoute
+);
 
 app.use('/api/v1/test', (req, res) => {
   fetchAll();

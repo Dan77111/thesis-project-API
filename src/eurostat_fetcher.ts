@@ -370,114 +370,118 @@ const fetchAll = () => {
       let mainIndicatorData: ESIndicatorData = {};
       let dataForCompositeIndicator: ESIndicatorData = {};
       let compositeData: ESIndicatorData = {};
-      // Request the data from the API and transform it into a json object
-      fetch(`${eurostatApiRoot}${endpoint}?${queryStr}`)
-        .then((res) => res.json())
-        .then((json) => {
-          // Get the info needed for combined parameters (if present)
-          const combinedParameterCodes: string[] = getCombinedParameterCodes(
-            json.dimension,
-            combinedParameter
-          );
-
-          // Get the data on years and locations present in the JSON response
-          const { years, locations } = getYearsAndLocations(json.dimension);
-
-          // Get the indicator data from the JSON response
-          mainIndicatorData = getIndicatorData(
-            years,
-            locations,
-            json.size,
-            json.id,
-            json.value,
-            combinedParameter,
-            combinedParameterCodes,
-            combiningOperation
-          );
-        })
-        .then(() => {
-          if (!indicator.composite) {
-            // Return main indicator data if not composite
-            saveIndicator(
-              indicatorName,
-              mainIndicatorData,
-              indicator.default_year,
-              eurostatIndicators[categoryName].type,
-              indicator.uom
-            );
-          } else {
-            // Composite indicators require 2 queries to the Eurostat API and an operation between the correspondent data from the 2 resulting datasets
-            // The required operation is in the composition_operation parameter of the additional_data Object. It is stored as a function
-
-            // additional_data contains the data for the second query needed for composite indicators
-            // The rest of the code works roughly the same way as that for the main query
-            const additionalDataEndpoint: string =
-              indicator.additional_data.endpoint;
-
-            // Get the operation used to compose the datasets
-            const compositionOperation: CompositionFunction =
-              indicator.additional_data.composition_operation;
-
-            // Combined parameter and combination operator are for indicators that need multiple values for the same parameter
-            // (e.g. different age values) and combine them with some operation before using them (e.g. sum of age values to create
-            // custom age intervals)
-            const {
-              combinedParameter: additionalDataCombinedParameter,
-              combinedParameterInstances: additionalDataCombinedParameterInstances,
-              combiningOperation: additionalDataCombiningOperation,
-            } = getCombinedParameterData(indicator.additional_data);
-
-            // Build the query string with all the necessary parameters
-            const additionalDataQueryStr: string = buildQueryString(
-              indicator.additional_data,
-              additionalDataCombinedParameter,
-              additionalDataCombinedParameterInstances
+      try {
+        // Request the data from the API and transform it into a json object
+        fetch(`${eurostatApiRoot}${endpoint}?${queryStr}`)
+          .then((res) => res.json())
+          .then((json) => {
+            // Get the info needed for combined parameters (if present)
+            const combinedParameterCodes: string[] = getCombinedParameterCodes(
+              json.dimension,
+              combinedParameter
             );
 
-            // Fetch the data from the API and transform it into a JSON object
-            fetch(
-              `${eurostatApiRoot}${additionalDataEndpoint}?${additionalDataQueryStr}`
-            )
-              .then((res) => res.json())
-              .then((json) => {
-                // Get the info needed for combined parameters (if present)
-                const combinedParameterCodes: string[] = getCombinedParameterCodes(
-                  json.dimension,
-                  additionalDataCombinedParameter
-                );
+            // Get the data on years and locations present in the JSON response
+            const { years, locations } = getYearsAndLocations(json.dimension);
 
-                // Get the data on years and locations present in the JSON response
-                const { years, locations } = getYearsAndLocations(json.dimension);
+            // Get the indicator data from the JSON response
+            mainIndicatorData = getIndicatorData(
+              years,
+              locations,
+              json.size,
+              json.id,
+              json.value,
+              combinedParameter,
+              combinedParameterCodes,
+              combiningOperation
+            );
+          })
+          .then(() => {
+            if (!indicator.composite) {
+              // Return main indicator data if not composite
+              saveIndicator(
+                indicatorName,
+                mainIndicatorData,
+                indicator.default_year,
+                eurostatIndicators[categoryName].type,
+                indicator.uom
+              );
+            } else {
+              // Composite indicators require 2 queries to the Eurostat API and an operation between the correspondent data from the 2 resulting datasets
+              // The required operation is in the composition_operation parameter of the additional_data Object. It is stored as a function
 
-                // Get the indicator data from the JSON response
-                dataForCompositeIndicator = getIndicatorData(
-                  years,
-                  locations,
-                  json.size,
-                  json.id,
-                  json.value,
-                  additionalDataCombinedParameter,
-                  combinedParameterCodes,
-                  additionalDataCombiningOperation
-                );
-                // Compose the two previously fetched indicators and return the resulting object
-                compositeData = composeIndicator(
-                  mainIndicatorData,
-                  dataForCompositeIndicator,
-                  compositionOperation
-                );
-              })
-              .then(() => {
-                saveIndicator(
-                  indicatorName,
-                  compositeData,
-                  indicator.default_year,
-                  eurostatIndicators[categoryName].type,
-                  indicator.uom
-                );
-              });
-          }
-        });
+              // additional_data contains the data for the second query needed for composite indicators
+              // The rest of the code works roughly the same way as that for the main query
+              const additionalDataEndpoint: string =
+                indicator.additional_data.endpoint;
+
+              // Get the operation used to compose the datasets
+              const compositionOperation: CompositionFunction =
+                indicator.additional_data.composition_operation;
+
+              // Combined parameter and combination operator are for indicators that need multiple values for the same parameter
+              // (e.g. different age values) and combine them with some operation before using them (e.g. sum of age values to create
+              // custom age intervals)
+              const {
+                combinedParameter: additionalDataCombinedParameter,
+                combinedParameterInstances: additionalDataCombinedParameterInstances,
+                combiningOperation: additionalDataCombiningOperation,
+              } = getCombinedParameterData(indicator.additional_data);
+
+              // Build the query string with all the necessary parameters
+              const additionalDataQueryStr: string = buildQueryString(
+                indicator.additional_data,
+                additionalDataCombinedParameter,
+                additionalDataCombinedParameterInstances
+              );
+
+              // Fetch the data from the API and transform it into a JSON object
+              fetch(
+                `${eurostatApiRoot}${additionalDataEndpoint}?${additionalDataQueryStr}`
+              )
+                .then((res) => res.json())
+                .then((json) => {
+                  // Get the info needed for combined parameters (if present)
+                  const combinedParameterCodes: string[] = getCombinedParameterCodes(
+                    json.dimension,
+                    additionalDataCombinedParameter
+                  );
+
+                  // Get the data on years and locations present in the JSON response
+                  const { years, locations } = getYearsAndLocations(json.dimension);
+
+                  // Get the indicator data from the JSON response
+                  dataForCompositeIndicator = getIndicatorData(
+                    years,
+                    locations,
+                    json.size,
+                    json.id,
+                    json.value,
+                    additionalDataCombinedParameter,
+                    combinedParameterCodes,
+                    additionalDataCombiningOperation
+                  );
+                  // Compose the two previously fetched indicators and return the resulting object
+                  compositeData = composeIndicator(
+                    mainIndicatorData,
+                    dataForCompositeIndicator,
+                    compositionOperation
+                  );
+                })
+                .then(() => {
+                  saveIndicator(
+                    indicatorName,
+                    compositeData,
+                    indicator.default_year,
+                    eurostatIndicators[categoryName].type,
+                    indicator.uom
+                  );
+                });
+            }
+          });
+      } catch (error) {
+        Logger.error('ERROR: Error while retrieving' + indicatorName);
+      }
     });
     // TODO: ADD EMPTY FIELDS FOR THE LOCATIONS THAT DON'T HAVE VALUES FOR THE CURRENT INDICATORS (USUALLY NON-EU COUNTRIES)
     //      WILL BE DONE IF NEEDED
@@ -546,7 +550,7 @@ const getEQI = () => {
       EQIData[location][year] = parseFloat(value);
     });
 
-    saveIndicator('EQI', EQIData, 2017, 'Index', 'INSTITUTIONS');
+    saveIndicator('EQI', EQIData, 2017, 'INSTITUTIONS', 'Index');
   });
   get('https://www.qogdata.pol.gu.se/data/eqi_data_long21.csv', (stream) => {
     stream.pipe(parser);

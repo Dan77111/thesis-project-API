@@ -1,8 +1,3 @@
-# LOGIN
-
-- Give users the option to save the previous queries they did
-- Manage users and save their data in the API DB
-
 # DATA FRAME
 
 - Access pre-loaded data frame or request new one

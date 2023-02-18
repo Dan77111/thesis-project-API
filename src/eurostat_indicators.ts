@@ -102,15 +102,15 @@ const eurostatIndicators: IndicatorAPIData = {
       GDPpc: {
         desc: 'GDP per Inhabitant',
         unit: 'EUR_HAB',
-        uom: 'M€',
-        uom_d: 'Millions of Euros',
+        uom: '€',
+        uom_d: 'Euros',
         default_year: 2018,
       },
       GDPpps_pc: {
         desc: 'GDP Purchasing Power Standards per Inhabitant',
         unit: 'PPS_EU27_2020_HAB',
-        uom: 'M€',
-        uom_d: 'Millions of Euros',
+        uom: '€',
+        uom_d: 'Euros',
         default_year: 2018,
       },
       GDPdens: {
@@ -151,6 +151,13 @@ const eurostatIndicators: IndicatorAPIData = {
         uom: '€pc',
         uom_d: 'Euros per Person',
         default_year: 2018,
+        composite: true,
+        additional_data: {
+          endpoint: 'nama_10r_3popgdp',
+          unit: 'THS',
+          composition_operation: (main: number, additional: number): number =>
+            (main / additional) * 1000,
+        },
       },
       GVAagr: {
         desc: 'Gross Value Added - by Sector - Agriculture, Forestry and Fishing',

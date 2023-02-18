@@ -129,7 +129,7 @@ export const currentRoute = (req: Request, res: Response) => {
                           desc: Object.fromEntries(desc),
                           meta: Object.fromEntries(meta),
                           keys: Object.fromEntries(keys),
-                          types: types,
+                          types,
                           values,
                         });
                       }

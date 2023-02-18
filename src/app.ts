@@ -4,13 +4,14 @@ import express from 'express';
 import schedule from 'node-schedule';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import fetch from 'node-fetch';
 import Logger from './lib/logger';
 import { DataInstance } from './models/data_instance';
 import { Indicator } from './models/indicator';
 import { currentRoute } from './routes/current';
 
 import { fetchAll } from './eurostat_fetcher';
-import { elaboratedRoute } from './routes/elaborated';
+import { analysisRoute } from './routes/analysis';
 const app = express();
 
 // @ts-ignore
@@ -48,15 +49,33 @@ const saveSnapshot: schedule.Job = schedule.scheduleJob('0 0 1 * *', () => {
 });
 
 app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/v1/current', currentRoute);
 
-app.use(
-  '/api/v1/elaborated/inds=:inds&locations=:locations&std=:std&method=:method',
-  elaboratedRoute
-);
+app.use('/api/v1/analysis/methods', (req, res) => {
+  try {
+    const completeApiUrl = `http://${process.env.R_API_URI}:${process.env.R_API_PORT}/methods`;
 
-app.use('/api/v1/test', (req, res) => {
+    fetch(completeApiUrl)
+      .then((response) => {
+        return response.json();
+      })
+      .then((json) => {
+        res.status(200).json({
+          standardizationMethods: json.standardizationMethods,
+          analysisMethods: json.analysisMethods,
+          analysisArguments: json.analysisArguments,
+        });
+      });
+  } catch (error) {
+    res.status(500).json('Error');
+  }
+});
+app.use('/api/v1/analysis/new', analysisRoute);
+
+app.use('/api/v1/refetch', (req, res) => {
   fetchAll();
   res.status(200).json('Done');
 });

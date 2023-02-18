@@ -605,7 +605,7 @@ export { fetchAll };
 /* DB STRUCTURE
 current collection
 name: {
-json_dump: "{location: {year: {value}, ...}, ...",
+json_dump: "{location: {year: value, ...}, ...",
 ...
 },
 ...
@@ -614,7 +614,7 @@ snapshots collection
 
 date: {
 data: {
-  json_dump: "{location: {year: {value}, ...}, ...",
+  json_dump: "{location: {year: value, ...}, ...",
   ...
   },
   ...
